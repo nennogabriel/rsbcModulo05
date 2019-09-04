@@ -4,12 +4,25 @@ export const Form = styled.form`
   margin-top: 30px;
   display: flex;
   flex-direction: row;
+  position: relative;
   input {
     flex: 1;
-    border: 1px solid #eee;
+    border: ${props => (props.error ? '2px solid #F00' : '1px solid #eee')};
     padding: 10px 15px;
     border-radius: 4px;
     font-size: 16px;
+  }
+  span {
+    /* Error message on span */
+    position: absolute;
+    z-index: 1000;
+    left: 0;
+    bottom: 0;
+    background: #cdcdcd;
+    color: #333;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transform: translateY(30px);
   }
 `;
 
