@@ -108,7 +108,7 @@ export default class Main extends Component {
           />
           {error && <span>{error}</span>}
 
-          <SubmitButton loading={loading}>
+          <SubmitButton loading={loading ? 1 : 0}>
             {loading ? (
               <FaSpinner color="#fff" size={14} />
             ) : (
