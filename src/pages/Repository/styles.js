@@ -116,3 +116,21 @@ export const Pagination = styled.div`
     border: 1px solid #ddd;
   }
 `;
+
+export const Filters = styled.div`
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  button {
+    padding: 10px 12px;
+    border: 1px solid #eee;
+    background: #eee;
+    color: #222;
+    &[disabled] {
+      color: #666;
+      background: transparent;
+      cursor: inherit;
+    }
+  }
+`;

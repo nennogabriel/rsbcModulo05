@@ -5,7 +5,7 @@ import queryString from 'query-string';
 
 import api from '../../services/api';
 import Container from '../../components/Container';
-import { Loading, Owner, IssueList, Pagination } from './styles';
+import { Loading, Owner, IssueList, Pagination, Filters } from './styles';
 
 const perPage = 5;
 export default class Repository extends Component {
@@ -25,6 +25,8 @@ export default class Repository extends Component {
     issues: [],
     loading: true,
     working: true,
+    filters: [{ state: 'all' }, { state: 'open' }, { state: 'closed' }],
+    filterIndex: 0,
     page: 1,
     pageLimit: false,
   };
@@ -32,28 +34,31 @@ export default class Repository extends Component {
   async componentDidMount() {
     const { match, location } = this.props;
     const query = queryString.parse(location.search);
-    // if (!(query.state in ['all', 'open', 'closed'])) {
-    //   query.state = 'all';
-    // }
+    if (['all', 'open', 'closed'].indexOf(query.state) < 0) {
+      query.state = 'all';
+    }
 
+    const { filters } = this.state;
+    const filterIndex = filters.findIndex(f => f.state === query.state);
     const repoName = decodeURIComponent(match.params.repository);
 
     const [repository, issues] = await Promise.all([
       api.get(`/repos/${repoName}`),
       api.get(`/repos/${repoName}/issues`, {
         params: {
-          state: 'all',
+          state: filters[filterIndex].state,
           page: query.page || 1,
           per_page: perPage,
         },
       }),
     ]);
 
-    this.setState({
+    await this.setState({
       repository: repository.data,
       issues: issues.data,
       loading: false,
       working: false,
+      filterIndex,
       page: query.page || 1,
       pageLimit: issues.data.length < perPage,
     });
@@ -61,11 +66,11 @@ export default class Repository extends Component {
 
   loadIssues = async () => {
     const { match } = this.props;
-    const { page } = this.state;
+    const { page, filters, filterIndex } = this.state;
     const repoName = decodeURIComponent(match.params.repository);
     const issues = await api.get(`/repos/${repoName}/issues`, {
       params: {
-        state: 'all',
+        state: filters[filterIndex].state,
         page: page || 1,
         per_page: perPage,
       },
@@ -86,12 +91,23 @@ export default class Repository extends Component {
     this.loadIssues();
   };
 
+  handleFilter = async index => {
+    await this.setState({
+      filterIndex: index,
+      page: 1,
+      pageLimit: false,
+    });
+    this.loadIssues();
+  };
+
   render() {
     const {
       repository,
       issues,
       loading,
       working,
+      filters,
+      filterIndex,
       page,
       pageLimit,
     } = this.state;
@@ -107,6 +123,18 @@ export default class Repository extends Component {
           <p>{repository.description}</p>
         </Owner>
         <IssueList>
+          <Filters>
+            {filters.map((filter, index) => (
+              <button
+                type="button"
+                key={filter.state}
+                onClick={() => this.handleFilter(index)}
+                disabled={index === filterIndex}
+              >
+                {filter.state}
+              </button>
+            ))}
+          </Filters>
           {issues.map(issue => (
             <li key={String(issue.id)}>
               <img src={issue.user.avatar_url} alt={issue.user.login} />
