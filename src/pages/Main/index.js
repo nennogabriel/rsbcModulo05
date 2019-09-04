@@ -44,13 +44,12 @@ export default class Main extends Component {
 
       const hasRepo = repositories.find(r => r.name === newRepo);
 
-      if (newRepo === '') throw 'Você precisa indicar um repositório';
+      if (newRepo === '') throw new Error('missing text');
 
       const reg = /([a-z])+\/([a-z])+/i;
-      if (!newRepo.match(reg))
-        throw 'Um repositório tem o formato <dev>/<projeto>';
+      if (!newRepo.match(reg)) throw new Error('regex fail');
 
-      if (hasRepo) throw 'Repositório já registrado';
+      if (hasRepo) throw new Error('found local data');
 
       const response = await api.get(`/repos/${newRepo}`);
       const data = {
@@ -61,11 +60,30 @@ export default class Main extends Component {
         repositories: [...repositories, data],
         newRepo: '',
       });
-    } catch (error) {
+    } catch (err) {
+      let error = '';
+      switch (err.toString()) {
+        case 'Error: missing text':
+          error = 'Você precisa indicar um repositório';
+          break;
+        case 'Error: regex fail':
+          error = 'Um repositório tem o formato <dev>/<projeto>';
+          break;
+        case 'Error: found local data':
+          error = 'Repositório já registrado';
+          break;
+        case 'Error: Request failed with status code 404':
+          error = 'Repositório não encontrado';
+          break;
+        default:
+          error = err.toString();
+      }
+
       if (typeof error === typeof '') {
         this.setState({ error });
       } else {
-        this.setState({ error: 'Parece que esse repositório não existe' });
+        this.setState({ error: error.toString() });
+        // this.setState({ error: 'Parece que esse repositório não existe' });
       }
     } finally {
       this.setState({ loading: false });
