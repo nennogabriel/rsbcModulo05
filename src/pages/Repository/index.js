@@ -1,11 +1,13 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
+import queryString from 'query-string';
 
 import api from '../../services/api';
 import Container from '../../components/Container';
-import { Loading, Owner, IssueList } from './styles';
+import { Loading, Owner, IssueList, Pagination } from './styles';
 
+const perPage = 5;
 export default class Repository extends Component {
   static propTypes = {
     match: PropTypes.shape({
@@ -13,16 +15,26 @@ export default class Repository extends Component {
         repository: PropTypes.string,
       }),
     }).isRequired,
+    location: PropTypes.shape({
+      search: PropTypes.string,
+    }).isRequired,
   };
 
   state = {
     repository: {},
     issues: [],
     loading: true,
+    working: true,
+    page: 1,
+    pageLimit: false,
   };
 
   async componentDidMount() {
-    const { match } = this.props;
+    const { match, location } = this.props;
+    const query = queryString.parse(location.search);
+    // if (!(query.state in ['all', 'open', 'closed'])) {
+    //   query.state = 'all';
+    // }
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -30,8 +42,9 @@ export default class Repository extends Component {
       api.get(`/repos/${repoName}`),
       api.get(`/repos/${repoName}/issues`, {
         params: {
-          state: 'open',
-          per_page: 5,
+          state: 'all',
+          page: query.page || 1,
+          per_page: perPage,
         },
       }),
     ]);
@@ -40,11 +53,48 @@ export default class Repository extends Component {
       repository: repository.data,
       issues: issues.data,
       loading: false,
+      working: false,
+      page: query.page || 1,
+      pageLimit: issues.data.length < perPage,
     });
   }
 
+  loadIssues = async () => {
+    const { match } = this.props;
+    const { page } = this.state;
+    const repoName = decodeURIComponent(match.params.repository);
+    const issues = await api.get(`/repos/${repoName}/issues`, {
+      params: {
+        state: 'all',
+        page: page || 1,
+        per_page: perPage,
+      },
+    });
+    this.setState({
+      issues: issues.data,
+      working: false,
+      pageLimit: issues.data.length < perPage,
+    });
+  };
+
+  handlePage = async action => {
+    const { page } = this.state;
+    await this.setState({
+      page: action === 'next' ? Number(page) + 1 : Number(page) - 1,
+      working: true,
+    });
+    this.loadIssues();
+  };
+
   render() {
-    const { repository, issues, loading } = this.state;
+    const {
+      repository,
+      issues,
+      loading,
+      working,
+      page,
+      pageLimit,
+    } = this.state;
     if (loading) {
       return <Loading>Carregando...</Loading>;
     }
@@ -56,7 +106,6 @@ export default class Repository extends Component {
           <h1>{repository.name}</h1>
           <p>{repository.description}</p>
         </Owner>
-
         <IssueList>
           {issues.map(issue => (
             <li key={String(issue.id)}>
@@ -75,6 +124,23 @@ export default class Repository extends Component {
             </li>
           ))}
         </IssueList>
+        <Pagination>
+          <button
+            type="button"
+            onClick={() => this.handlePage('previous')}
+            disabled={working || page < 2}
+          >
+            anterior
+          </button>
+          <span>{page}</span>
+          <button
+            type="button"
+            onClick={() => this.handlePage('next')}
+            disabled={working || pageLimit}
+          >
+            próximo
+          </button>
+        </Pagination>
       </Container>
     );
   }
