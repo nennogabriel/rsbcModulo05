@@ -46,7 +46,7 @@ export default class Main extends Component {
 
       if (newRepo === '') throw new Error('missing text');
 
-      const reg = /([a-z])+\/([a-z])+/i;
+      const reg = /([a-z0-9])+\/([a-z0-9])+/i;
       if (!newRepo.match(reg)) throw new Error('regex fail');
 
       if (hasRepo) throw new Error('found local data');
